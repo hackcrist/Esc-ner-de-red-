@@ -136,9 +136,19 @@ def enrich(ips, known=None):
     return out
 
 
-def main():
+def clear():
+    if sys.stdout.isatty():
+        os.system("cls" if os.name == "nt" else "clear")
+
+
+def show_home():
+    clear()
     print(BANNER)
     print(f" {C.NY}Solo tu propia red. Fines educativos.{C.END}")
+
+
+def main():
+    show_home()
     net = netdiscover.local_network()
     if "error" in net:
         print(f" [!] {net['error']}")
@@ -281,6 +291,7 @@ def main():
         else:
             print(" Opción no válida")
         input(f"\n {C.D}Enter para continuar...{C.END}")
+        show_home()
 
 
 if __name__ == "__main__":
