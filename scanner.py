@@ -127,12 +127,24 @@ def main():
             print(" Adiós.")
             return
         elif c == "1":
-            print(f" {C.NY}Escaneando {net['red']} (tarda ~30s)...{C.END}")
-            vivos = netdiscover.ping_sweep(
-                net["red"],
-                progress=lambda d, t: print(f"   ...{d}/{t}", end="\r"))
-            print(" " * 30, end="\r")
             known = load_last()
+            if nmapscan.nmap_path():
+                print(f" {C.NY}Descubriendo con nmap -sn {net['red']}...{C.END}")
+                try:
+                    vivos = nmapscan.discover(net["red"])
+                except Exception as e:
+                    print(f" [!] nmap falló ({e}), usando sweep Python...")
+                    vivos = netdiscover.ping_sweep(
+                        net["red"],
+                        progress=lambda d, t: print(f"   ...{d}/{t}", end="\r"))
+                    print(" " * 30, end="\r")
+            else:
+                print(f" {C.NY}nmap no instalado, usando sweep Python en {net['red']} (tarda ~30s)...{C.END}")
+                print(" Instala nmap para ir más rápido: https://nmap.org/download.html")
+                vivos = netdiscover.ping_sweep(
+                    net["red"],
+                    progress=lambda d, t: print(f"   ...{d}/{t}", end="\r"))
+                print(" " * 30, end="\r")
             last = enrich(vivos, known or None)
             nuevos = [d for d in last if d.get("nuevo")]
             if nuevos and known:
