@@ -35,7 +35,7 @@ BANNER = f"""{C.NC}{C.BOLD}
  |  _| \\__ \\ |   |  \\| |  \\| |  _| | |_) |
  | |___ ___) | |__| |\\  | |\\  | |___|  _ <
  |_____|____/\\____|_| \\_|_| \\_|_____|_| \\_\\{C.END}
-  {C.NP}{C.BOLD}Escáner de red v{__version__}{C.END} {C.D}(educativo, objetivos autorizados){C.END}
+  {C.NP}{C.BOLD}Escáner de red v{__version__}{C.END}
 """
 
 
@@ -109,8 +109,10 @@ def main():
     if "error" in net:
         print(f" [!] {net['error']}")
         sys.exit(1)
-    print(f" Tu IP: {C.W}{net['ip']}{C.END} | Red: {C.W}{net['red']}{C.END} "
-          f"| Gateway: {C.W}{net['gateway']}{C.END} | Hosts: {net.get('total_hosts')}")
+    print(f" {C.NC}Tu IP:{C.END} {C.W}{net['ip']}{C.END} {C.D}|{C.END} "
+          f"{C.NC}Red:{C.END} {C.W}{net['red']}{C.END} {C.D}|{C.END} "
+          f"{C.NC}Gateway:{C.END} {C.W}{net['gateway']}{C.END} {C.D}|{C.END} "
+          f"{C.NC}Hosts:{C.END} {C.W}{net.get('total_hosts')}{C.END}")
     last: list[dict] = []
 
     def do_scan(red: str) -> list[dict]:
