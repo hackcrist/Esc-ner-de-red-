@@ -172,3 +172,16 @@ li{{background:#14142b;margin:8px;padding:12px;border-radius:10px}}a{{color:#00f
 def list_reports() -> list[str]:
     ensure_dir()
     return sorted(os.listdir(BASE_DIR), reverse=True)
+
+
+def save_detail(ip: str, info: dict) -> str:
+    """Guarda ficha de una IP (opción Detalle)."""
+    ensure_dir()
+    fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    safe = ip.replace(".", "-").replace(":", "-")
+    path = os.path.join(BASE_DIR, f"detalle_{safe}.txt")
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(f"FICHA IP - {fecha}\n" + "=" * 40 + "\n")
+        for k, v in info.items():
+            f.write(f"{k}: {v}\n")
+    return path

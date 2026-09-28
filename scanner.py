@@ -156,7 +156,7 @@ def main():
     last: list[dict] = []
     last_audit: list[str] = []
 
-    def do_scan(red: str, local: bool = True) -> list[dict]:
+    def do_scan(red: str, local: bool = True, autosave: bool = True) -> list[dict]:
         """Barrido con nmap si hay, si no Python. Devuelve equipos enriquecidos."""
         if nmapscan.nmap_path():
             print(f" {C.NY}Descubriendo con nmap -sn {red}...{C.END}")
@@ -187,6 +187,13 @@ def main():
             print(f"   {col}·{C.END} {h}")
         nonlocal last_audit
         last_audit = audit
+        if autosave:
+            try:
+                h, t, c = reporter.save_scan(
+                    devs, {"gateway": net.get("gateway"), "red": red, "ip": net.get("ip")}, audit)
+                print(f" {C.NG}Auto-guardado:{C.END} {os.path.basename(h)} + TXT + CSV")
+            except Exception as e:
+                print(f" [!] No se pudo guardar: {e}")
         return devs
 
     while True:
@@ -241,14 +248,19 @@ def main():
         elif c == "3":
             ip = ask("IP (ej. 192.168.12.1)")
             mac = netdiscover.arp_table().get(ip, "-")
-            print(f"   IP: {ip}\n   MAC: {mac}")
-            print(f"   Fabricante: {netdiscover.vendor_of(mac) if mac != '-' else '-'}")
-            print(f"   Nombre: {netdiscover.reverse_name(ip)}")
             lat = netdiscover.ping_latency(ip)
-            print(f"   Latencia: {lat if lat is not None else 'no responde'} ms")
-            print(f"   Puertos: {netdiscover.quick_ports(ip) or '-'}")
+            puertos = netdiscover.quick_ports(ip)
+            info = {"IP": ip, "MAC": mac,
+                    "Fabricante": netdiscover.vendor_of(mac) if mac != "-" else "-",
+                    "Nombre": netdiscover.reverse_name(ip),
+                    "Latencia_ms": lat if lat is not None else "no responde",
+                    "Puertos": ",".join(map(str, puertos)) or "-"}
+            for k, v in info.items():
+                print(f"   {k}: {v}")
             if ask("¿Traceroute? [s/N]").lower() in ("s", "si", "sí", "y"):
-                print(netdiscover.traceroute(ip))
+                tr = netdiscover.traceroute(ip)
+                print(tr)
+                info["Traceroute"] = tr[:500]
             if nmapscan.nmap_path():
                 if ask("¿Versiones con nmap -sV? [s/N]").lower() in ("s", "si", "sí", "y"):
                     if not confirm_auth():
@@ -256,6 +268,8 @@ def main():
                         continue
                     try:
                         servs = nmapscan.versions(ip)
+                        info["Servicios"] = "; ".join(
+                            f"{s['puerto']}/{s['servicio']} {s['version']}" for s in servs) or "-"
                         for s in servs:
                             print(f"   puerto {s['puerto']}: {s['servicio']} {s['version']}")
                         for a in nmapscan.advisories(
@@ -264,8 +278,13 @@ def main():
                     except Exception as e:
                         print(f" [!] {e}")
             else:
-                for a in nmapscan.advisories(netdiscover.quick_ports(ip)):
+                for a in nmapscan.advisories(puertos):
                     print(f"   {C.NY}! {a}{C.END}")
+            try:
+                p = reporter.save_detail(ip, info)
+                print(f" {C.NG}Guardado:{C.END} {os.path.basename(p)}")
+            except Exception as e:
+                print(f" [!] No se pudo guardar: {e}")
         elif c == "4":
             import time as _t
             mins = ask("Cada cuántos minutos re-escanear [5]") or "5"
@@ -277,8 +296,16 @@ def main():
             print(f" {C.NY}Vigilando {net['red']} cada {mins} min. Ctrl+C para parar.{C.END}")
             try:
                 while True:
-                    devs = do_scan(net["red"])
+                    devs = do_scan(net["red"], autosave=False)
                     last = devs
+                    if any(d.get("nuevo") for d in devs):
+                        try:
+                            h, t, c = reporter.save_scan(
+                                devs, {"gateway": net.get("gateway"),
+                                       "red": net["red"], "ip": net.get("ip")}, last_audit)
+                            print(f" {C.NG}Intruso guardado:{C.END} {os.path.basename(h)}")
+                        except Exception as e:
+                            print(f" [!] No se pudo guardar: {e}")
                     _t.sleep(cada)
             except KeyboardInterrupt:
                 print("\n Vigilancia detenida.")
