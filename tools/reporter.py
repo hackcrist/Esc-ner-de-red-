@@ -1,0 +1,80 @@
+"""Reportes del escáner LAN en reportes/ (HTML + TXT + índice)."""
+import datetime
+import html
+import os
+
+BASE_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "reportes")
+
+
+def ensure_dir() -> str:
+    os.makedirs(BASE_DIR, exist_ok=True)
+    return BASE_DIR
+
+
+def save_scan(devices: list[dict], netinfo: dict) -> tuple[str, str, str]:
+    ensure_dir()
+    ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+    fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    red = (netinfo.get("red") or "lan").replace("/", "-")
+
+    txt = os.path.join(BASE_DIR, f"scan_{red}_{ts}.txt")
+    with open(txt, "w", encoding="utf-8") as f:
+        f.write("=" * 60 + "\n SCAN RED LOCAL - Solo tu propia red, fines educativos\n" + "=" * 60 + "\n")
+        f.write(f"Fecha: {fecha}\nRed: {netinfo.get('red')} | Tu IP: {netinfo.get('ip')} | Gateway: {netinfo.get('gateway')}\n")
+        f.write(f"Dispositivos: {len(devices)}\n\n")
+        f.write(f"{'IP':<16}{'MAC':<20}{'MS':<7}{'PUERTOS':<16}{'FABRICANTE':<24}NOMBRE\n" + "-" * 110 + "\n")
+        for d in devices:
+            nuevo = " [NUEVO]" if d.get("nuevo") else ""
+            f.write(f"{d['ip']:<16}{d.get('mac', '-'):<20}{d.get('latencia', '-'):<7}"
+                    f"{','.join(map(str, d.get('puertos', []))) or '-':<16}"
+                    f"{d.get('vendor', '-'):<24}{d.get('nombre', '-')}{nuevo}\n")
+
+    import csv
+    csvp = os.path.join(BASE_DIR, f"scan_{red}_{ts}.csv")
+    with open(csvp, "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["ip", "mac", "latencia_ms", "puertos", "fabricante", "nombre", "nuevo"])
+        for d in devices:
+            w.writerow([d["ip"], d.get("mac", "-"), d.get("latencia", "-"),
+                        ";".join(map(str, d.get("puertos", []))),
+                        d.get("vendor", "-"), d.get("nombre", "-"), bool(d.get("nuevo"))])
+
+    rows = "".join(
+        f"<tr><td>{html.escape(d['ip'])}</td><td>{html.escape(d.get('mac', '-'))}</td>"
+        f"<td>{html.escape(str(d.get('latencia', '-')))}</td>"
+        f"<td>{html.escape(','.join(map(str, d.get('puertos', []))) or '-')}</td>"
+        f"<td>{html.escape(d.get('vendor', '-'))}</td><td>{html.escape(d.get('nombre', '-'))}</td>"
+        f"<td>{'NUEVO' if d.get('nuevo') else ''}</td></tr>"
+        for d in devices)
+    page = f"""<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<title>Scan {html.escape(str(netinfo.get('red')))}</title>
+<style>body{{font-family:Segoe UI,Arial;background:#0a0a14;color:#eee;margin:0}}
+header{{padding:28px;text-align:center;background:linear-gradient(135deg,#00ffea,#ff00ff)}}
+h1{{margin:0;color:#000}}table{{width:94%;margin:20px auto;border-collapse:collapse;background:#14142b;font-size:.9em}}
+th,td{{padding:8px 10px;border-bottom:1px solid #ffffff18;text-align:left}}th{{color:#00ffea}}</style></head>
+<body><header><h1>SCAN RED LOCAL</h1><p>{html.escape(fecha)} · {html.escape(str(netinfo.get('red')))} · {len(devices)} equipos</p></header>
+<table><tr><th>IP</th><th>MAC</th><th>ms</th><th>Puertos</th><th>Fabricante</th><th>Nombre</th><th></th></tr>{rows}</table></body></html>"""
+    htm = os.path.join(BASE_DIR, f"scan_{red}_{ts}.html")
+    with open(htm, "w", encoding="utf-8") as f:
+        f.write(page)
+    _index()
+    return htm, txt, csvp
+
+
+def _index():
+    ensure_dir()
+    files = sorted([a for a in os.listdir(BASE_DIR) if a.startswith("scan_") and a.endswith(".html")], reverse=True)
+    items = "".join(f'<li><a href="{html.escape(a)}">{html.escape(a)}</a></li>' for a in files) or "<li>Sin escaneos.</li>"
+    page = f"""<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Scans LAN</title>
+<style>body{{font-family:Segoe UI,Arial;background:#0a0a14;color:#eee;margin:0}}
+header{{padding:26px;text-align:center;background:linear-gradient(135deg,#00ffea,#ff00ff)}}
+h1{{margin:0;color:#000}}ul{{max-width:700px;margin:20px auto;list-style:none;padding:0}}
+li{{background:#14142b;margin:8px;padding:12px;border-radius:10px}}a{{color:#00ffea}}</style></head>
+<body><header><h1>SCANS DE RED LOCAL</h1></header><ul>{items}</ul></body></html>"""
+    with open(os.path.join(BASE_DIR, "index.html"), "w", encoding="utf-8") as f:
+        f.write(page)
+
+
+def list_reports() -> list[str]:
+    ensure_dir()
+    return sorted(os.listdir(BASE_DIR), reverse=True)

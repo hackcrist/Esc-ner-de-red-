@@ -1,0 +1,5 @@
+# Reportes del escáner (se auto-crean, no subir)
+reportes/
+__pycache__/
+*/__pycache__/
+*.pyc
