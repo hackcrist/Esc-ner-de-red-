@@ -40,6 +40,20 @@ Comandos Go: `mynet sweep arp vendor report menu version`.
 
 Opcional: instala [nmap](https://nmap.org/download.html) (+Npcap en Windows) para descubrimiento y versiones más rápidas.
 
+## 📱 Termux (Android)
+
+Instala Termux desde **F-Droid o GitHub** (no Play Store), clona y corre:
+
+```bash
+pkg install git python -y
+git clone https://github.com/hackcrist/Esc-ner-de-red-.git
+cd Esc-ner-de-red-
+bash install-termux.sh
+python scanner.py
+```
+
+Sin dependencias pip: todo es biblioteca estándar. Sin root funciona todo menos algunos modos de nmap.
+
 ## 📁 Estructura
 
 ```
