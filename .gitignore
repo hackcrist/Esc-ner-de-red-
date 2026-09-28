@@ -3,3 +3,7 @@ reportes/
 __pycache__/
 */__pycache__/
 *.pyc
+
+# Binario Go (compilar local: cd go && go build -o lanscan-go.exe .)
+go/lanscan-go
+go/lanscan-go.exe
