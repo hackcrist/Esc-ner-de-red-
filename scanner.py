@@ -112,97 +112,48 @@ def main():
     print(f" Tu IP: {C.W}{net['ip']}{C.END} | Red: {C.W}{net['red']}{C.END} "
           f"| Gateway: {C.W}{net['gateway']}{C.END} | Hosts: {net.get('total_hosts')}")
     last: list[dict] = []
+
+    def do_scan(red: str) -> list[dict]:
+        """Barrido con nmap si hay, si no Python. Devuelve equipos enriquecidos."""
+        if nmapscan.nmap_path():
+            print(f" {C.NY}Descubriendo con nmap -sn {red}...{C.END}")
+            try:
+                vivos = nmapscan.discover(red)
+            except Exception as e:
+                print(f" [!] nmap falló ({e}), usando sweep Python...")
+                vivos = netdiscover.ping_sweep(
+                    red, progress=lambda d, t: print(f"   ...{d}/{t}", end="\r"))
+                print(" " * 30, end="\r")
+        else:
+            print(f" {C.NY}Sweep Python en {red} (~30s, instala nmap para ir más rápido)...{C.END}")
+            vivos = netdiscover.ping_sweep(
+                red, progress=lambda d, t: print(f"   ...{d}/{t}", end="\r"))
+            print(" " * 30, end="\r")
+        known = load_last()
+        devs = enrich(vivos, known or None)
+        nuevos = [d for d in devs if d.get("nuevo")]
+        if nuevos and known:
+            print(f" {C.NY}{C.BOLD}ALERTA: equipo(s) nuevo(s): {', '.join(d['ip'] for d in nuevos)}{C.END}")
+        save_last([d["ip"] for d in devs])
+        print(f" {C.NG}Encontrados: {len(devs)}{C.END}")
+        show(devs)
+        return devs
+
     while True:
         print(f"\n {C.NV}{C.BOLD}+-- MENU --+{C.END}")
         print(f"  {C.NC}[1]{C.END} > Escanear mi red")
-        print(f"  {C.NC}[2]{C.END} > Ver tabla ARP")
-        print(f"  {C.NC}[3]{C.END} > Detalle de una IP")
-        print(f"  {C.NC}[4]{C.END} > Guardar reporte (HTML+TXT+CSV)")
-        print(f"  {C.NC}[5]{C.END} > Vigilar (alerta intrusos)")
-        print(f"  {C.NC}[6]{C.END} > Nmap (descubrir + versiones)")
-        print(f"  {C.NC}[7]{C.END} > Escanear otra red (autorizada)")
+        print(f"  {C.NC}[2]{C.END} > Escanear otra red (autorizada)")
+        print(f"  {C.NC}[3]{C.END} > Detalle + versiones de una IP")
+        print(f"  {C.NC}[4]{C.END} > Vigilar (alerta intrusos)")
+        print(f"  {C.NC}[5]{C.END} > Guardar reporte (HTML+TXT+CSV)")
         print(f"  {C.NO}[0]{C.END} < Salir")
         c = ask("Elige")
         if c == "0":
             print(" Adiós.")
             return
         elif c == "1":
-            known = load_last()
-            if nmapscan.nmap_path():
-                print(f" {C.NY}Descubriendo con nmap -sn {net['red']}...{C.END}")
-                try:
-                    vivos = nmapscan.discover(net["red"])
-                except Exception as e:
-                    print(f" [!] nmap falló ({e}), usando sweep Python...")
-                    vivos = netdiscover.ping_sweep(
-                        net["red"],
-                        progress=lambda d, t: print(f"   ...{d}/{t}", end="\r"))
-                    print(" " * 30, end="\r")
-            else:
-                print(f" {C.NY}nmap no instalado, usando sweep Python en {net['red']} (tarda ~30s)...{C.END}")
-                print(" Instala nmap para ir más rápido: https://nmap.org/download.html")
-                vivos = netdiscover.ping_sweep(
-                    net["red"],
-                    progress=lambda d, t: print(f"   ...{d}/{t}", end="\r"))
-                print(" " * 30, end="\r")
-            last = enrich(vivos, known or None)
-            nuevos = [d for d in last if d.get("nuevo")]
-            if nuevos and known:
-                print(f" {C.NY}{C.BOLD}ALERTA: {len(nuevos)} equipo(s) nuevo(s) en tu red:{C.END}")
-                for d in nuevos:
-                    print(f"   ! {d['ip']} ({d.get('vendor')})")
-            save_last([d["ip"] for d in last])
-            print(f" {C.NG}Encontrados: {len(last)}{C.END}")
-            show(last)
+            last = do_scan(net["red"])
         elif c == "2":
-            arp = netdiscover.arp_table()
-            last = enrich(sorted(arp))
-            print(f" {C.NG}Entradas ARP: {len(last)}{C.END}")
-            show(last)
-        elif c == "3":
-            ip = ask("IP (ej. 192.168.12.1)")
-            arp = netdiscover.arp_table()
-            mac = arp.get(ip, "-")
-            print(f"   IP: {ip}\n   MAC: {mac}")
-            print(f"   Fabricante: {netdiscover.vendor_of(mac) if mac != '-' else '-'}")
-            print(f"   Nombre: {netdiscover.reverse_name(ip)}")
-            print(f"   Ping: {'responde' if netdiscover.ping_one(ip) else 'no responde'}")
-        elif c == "4":
-            if not last:
-                print(" [!] Escanea primero (opción 1 o 2).")
-                continue
-            h, t, c = reporter.save_scan(last, net)
-            print(f" {C.NG}Guardado:{C.END}\n   HTML: {h}\n   TXT : {t}\n   CSV : {c}")
-        elif c == "6":
-            if not nmapscan.nmap_path():
-                print(" [!] nmap no instalado. Descárgalo de https://nmap.org/download.html")
-                print("     (en Windows instala también Npcap cuando lo pida).")
-                continue
-            print(f" {C.NY}Descubriendo con nmap -sn {net['red']}...{C.END}")
-            try:
-                vivos = nmapscan.discover(net["red"])
-            except Exception as e:
-                print(f" [!] {e}")
-                continue
-            print(f" {C.NG}Hosts activos: {len(vivos)}{C.END}")
-            for ip in vivos:
-                print(f"   + {ip}")
-            host = ask("IP para versiones de servicios [Enter=omitir]")
-            if host:
-                print(f" {C.NY}nmap -sV {host} (tarda ~30s, requiere confirmación){C.END}")
-                if not confirm_auth():
-                    print(" Cancelado.")
-                    continue
-                try:
-                    servs = nmapscan.versions(host)
-                    for s in servs:
-                        print(f"   puerto {s['puerto']}: {s['servicio']} {s['version']}")
-                    avisos = nmapscan.advisories([int(s["puerto"]) for s in servs if s["puerto"].isdigit()])
-                    for a in avisos:
-                        print(f"   {C.NY}! {a}{C.END}")
-                except Exception as e:
-                    print(f" [!] {e}")
-        elif c == "7":
             if not confirm_auth():
                 print(" Cancelado: se requiere autorización.")
                 continue
@@ -213,12 +164,35 @@ def main():
             except ValueError:
                 print(" [!] CIDR no válido.")
                 continue
-            print(f" {C.NY}Escaneando {red}... (MAC/fabricante solo salen en LAN local){C.END}")
-            vivos = netdiscover.ping_sweep(red)
-            last = enrich(vivos)
-            print(f" {C.NG}Encontrados: {len(last)}{C.END}")
-            show(last)
-        elif c == "5":
+            print(f" {C.D}Nota: MAC/fabricante solo salen en LAN local.{C.END}")
+            last = do_scan(red)
+        elif c == "3":
+            ip = ask("IP (ej. 192.168.12.1)")
+            mac = netdiscover.arp_table().get(ip, "-")
+            print(f"   IP: {ip}\n   MAC: {mac}")
+            print(f"   Fabricante: {netdiscover.vendor_of(mac) if mac != '-' else '-'}")
+            print(f"   Nombre: {netdiscover.reverse_name(ip)}")
+            lat = netdiscover.ping_latency(ip)
+            print(f"   Latencia: {lat if lat is not None else 'no responde'} ms")
+            print(f"   Puertos: {netdiscover.quick_ports(ip) or '-'}")
+            if nmapscan.nmap_path():
+                if ask("¿Versiones con nmap -sV? [s/N]").lower() in ("s", "si", "sí", "y"):
+                    if not confirm_auth():
+                        print(" Cancelado.")
+                        continue
+                    try:
+                        servs = nmapscan.versions(ip)
+                        for s in servs:
+                            print(f"   puerto {s['puerto']}: {s['servicio']} {s['version']}")
+                        for a in nmapscan.advisories(
+                                [int(s["puerto"]) for s in servs if s["puerto"].isdigit()]):
+                            print(f"   {C.NY}! {a}{C.END}")
+                    except Exception as e:
+                        print(f" [!] {e}")
+            else:
+                for a in nmapscan.advisories(netdiscover.quick_ports(ip)):
+                    print(f"   {C.NY}! {a}{C.END}")
+        elif c == "4":
             import time as _t
             mins = ask("Cada cuántos minutos re-escanear [5]") or "5"
             try:
@@ -229,19 +203,17 @@ def main():
             print(f" {C.NY}Vigilando {net['red']} cada {mins} min. Ctrl+C para parar.{C.END}")
             try:
                 while True:
-                    vivos = netdiscover.ping_sweep(net["red"])
-                    known = load_last()
-                    devs = enrich(vivos, known or None)
-                    nuevos = [d for d in devs if d.get("nuevo")]
-                    if nuevos and known:
-                        print(f"\n {C.NY}{C.BOLD}INTRUSO: {', '.join(d['ip'] for d in nuevos)}{C.END}")
-                    else:
-                        print(f" {_t.strftime('%H:%M:%S')} sin novedad ({len(devs)} equipos)")
-                    save_last([d["ip"] for d in devs])
+                    devs = do_scan(net["red"])
                     last = devs
                     _t.sleep(cada)
             except KeyboardInterrupt:
                 print("\n Vigilancia detenida.")
+        elif c == "5":
+            if not last:
+                print(" [!] Escanea primero (opción 1 o 2).")
+                continue
+            h, t, c = reporter.save_scan(last, net)
+            print(f" {C.NG}Guardado:{C.END}\n   HTML: {h}\n   TXT : {t}\n   CSV : {c}")
         else:
             print(" Opción no válida")
         input(f"\n {C.D}Enter para continuar...{C.END}")
