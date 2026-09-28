@@ -19,6 +19,18 @@ Menú: `1) Escanear  2) ARP  3) Detalle IP  4) Guardar reporte  5) Vigilar`.
 
 Sin dependencias: solo Python 3.10+ (biblioteca estándar).
 
+## Gemelo Go (más rápido)
+
+```bash
+cd go
+go build -o lanscan-go.exe .
+./lanscan-go.exe sweep --net 192.168.12.0/24
+./lanscan-go.exe report --net 192.168.12.0/24
+./lanscan-go.exe menu
+```
+
+Comandos: `mynet sweep arp vendor report menu version`. El sweep en Go tarda ~16s vs ~40s en Python.
+
 ## Estructura
 
 ```
