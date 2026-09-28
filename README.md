@@ -11,7 +11,7 @@ python scanner.py            # menú interactivo
 python scanner.py --version  # ver versión
 ```
 
-Menú estable (5 opciones verificadas): `1) Mi red  2) Otra red  3) Detalle+versiones  4) Vigilar  5) Guardar`.
+Menú estable: `1) Escanear  2) Otra red  3) Detalle  4) Vigilar  5) Guardar`.
 
 - Cada equipo: IP, MAC, **latencia ms**, **puertos comunes abiertos**, fabricante y nombre.
 - **Alerta de intrusos**: compara con el escaneo anterior y marca `[NUEVO]`; el modo vigía re-escanea cada N minutos.

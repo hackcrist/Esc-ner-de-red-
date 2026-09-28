@@ -141,11 +141,11 @@ def main():
 
     while True:
         print(f"\n {C.NV}{C.BOLD}+-- MENU --+{C.END}")
-        print(f"  {C.NC}[1]{C.END} > Escanear mi red")
-        print(f"  {C.NC}[2]{C.END} > Escanear otra red (autorizada)")
-        print(f"  {C.NC}[3]{C.END} > Detalle + versiones de una IP")
-        print(f"  {C.NC}[4]{C.END} > Vigilar (alerta intrusos)")
-        print(f"  {C.NC}[5]{C.END} > Guardar reporte (HTML+TXT+CSV)")
+        print(f"  {C.NC}[1]{C.END} > Escanear red")
+        print(f"  {C.NC}[2]{C.END} > Otra red")
+        print(f"  {C.NC}[3]{C.END} > Detalle IP")
+        print(f"  {C.NC}[4]{C.END} > Vigilar")
+        print(f"  {C.NC}[5]{C.END} > Guardar")
         print(f"  {C.NO}[0]{C.END} < Salir")
         c = ask("Elige")
         if c == "0":
