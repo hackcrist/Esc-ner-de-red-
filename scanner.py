@@ -48,8 +48,8 @@ def confirm_auth() -> bool:
     return ask("¿Confirmas autorización? [s/N]").lower() in ("s", "si", "sí", "y", "yes")
 
 
-def net_audit(devices: list[dict], netinfo: dict) -> list[str]:
-    """Auditoría de RED (no personal): resumen de exposición de la red."""
+def net_audit(devices: list[dict], netinfo: dict, local: bool = True) -> list[str]:
+    """Auditoría de RED (no personal). local=False: omite lo que solo vale en LAN."""
     from tools import nmapscan
     hallazgos: list[str] = []
     expuestos: dict[int, list[str]] = {}
@@ -66,14 +66,19 @@ def net_audit(devices: list[dict], netinfo: dict) -> list[str]:
                   if any(x in d.get("puertos", []) for x in (21, 23))]
     if telnet_ftp:
         hallazgos.append("CRÍTICO: FTP/Telnet en claro en: " + ", ".join(telnet_ftp))
-    dns = netdiscover.dns_servers() if hasattr(netdiscover, "dns_servers") else []
-    if dns:
-        hallazgos.append("DNS de la red: " + ", ".join(dns))
-    hallazgos.append("Internet: " + ("OK" if netdiscover.internet_ok() else "sin salida"))
-    gw = next((d for d in devices if d["ip"] == netinfo.get("gateway")), None)
-    if gw:
-        hallazgos.append(f"Gateway {gw['ip']}: {gw.get('vendor', '-')} "
-                         f"puertos {','.join(map(str, gw.get('puertos', []))) or '-'}")
+    con_ptr = [d["ip"] for d in devices if d.get("nombre", "-") != "-"]
+    hallazgos.append(f"Con nombre PTR: {len(con_ptr)}/{len(devices)}")
+    if local:
+        dns = netdiscover.dns_servers()
+        if dns:
+            hallazgos.append("DNS de la red: " + ", ".join(dns))
+        hallazgos.append("Internet: " + ("OK" if netdiscover.internet_ok() else "sin salida"))
+        gw = next((d for d in devices if d["ip"] == netinfo.get("gateway")), None)
+        if gw:
+            hallazgos.append(f"Gateway {gw['ip']}: {gw.get('vendor', '-')} "
+                             f"puertos {','.join(map(str, gw.get('puertos', []))) or '-'}")
+    else:
+        hallazgos.append("Remoto: MAC/fabricante no aplican fuera de LAN (límite de ARP).")
     return hallazgos
 
 
@@ -141,7 +146,7 @@ def main():
     last: list[dict] = []
     last_audit: list[str] = []
 
-    def do_scan(red: str) -> list[dict]:
+    def do_scan(red: str, local: bool = True) -> list[dict]:
         """Barrido con nmap si hay, si no Python. Devuelve equipos enriquecidos."""
         if nmapscan.nmap_path():
             print(f" {C.NY}Descubriendo con nmap -sn {red}...{C.END}")
@@ -166,7 +171,7 @@ def main():
         print(f" {C.NG}Encontrados: {len(devs)}{C.END}")
         show(devs)
         print(f"\n {C.NY}{C.BOLD}AUDITORÍA DE RED:{C.END}")
-        audit = net_audit(devs, {"gateway": net.get("gateway")})
+        audit = net_audit(devs, {"gateway": net.get("gateway")}, local=(red == net.get("red")))
         for h in audit:
             col = C.NG if h.startswith("OK") else C.NO if "CRÍTICO" in h else C.NY
             print(f"   {col}·{C.END} {h}")
@@ -200,7 +205,7 @@ def main():
                 print(" [!] CIDR no válido.")
                 continue
             print(f" {C.D}Nota: MAC/fabricante solo salen en LAN local.{C.END}")
-            last = do_scan(red)
+            last = do_scan(red, local=False)
         elif c == "3":
             ip = ask("IP (ej. 192.168.12.1)")
             mac = netdiscover.arp_table().get(ip, "-")
@@ -210,6 +215,8 @@ def main():
             lat = netdiscover.ping_latency(ip)
             print(f"   Latencia: {lat if lat is not None else 'no responde'} ms")
             print(f"   Puertos: {netdiscover.quick_ports(ip) or '-'}")
+            if ask("¿Traceroute? [s/N]").lower() in ("s", "si", "sí", "y"):
+                print(netdiscover.traceroute(ip))
             if nmapscan.nmap_path():
                 if ask("¿Versiones con nmap -sV? [s/N]").lower() in ("s", "si", "sí", "y"):
                     if not confirm_auth():

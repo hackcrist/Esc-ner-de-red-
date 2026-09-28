@@ -1,5 +1,6 @@
 """Descubrimiento LAN: red local, ping sweep, tabla ARP y fabricantes."""
 import ipaddress
+import os
 import platform
 import re
 import socket
@@ -205,3 +206,39 @@ def internet_ok(timeout: float = 3.0) -> bool:
         return True
     except Exception:
         return False
+
+
+def traceroute(host: str, max_hops: int = 12, timeout: int = 2) -> str:
+    """Traza ruta al objetivo (funciona fuera de tu red)."""
+    host = host.strip()
+    if not re.match(r"^[A-Za-z0-9.\-:]+$", host):
+        return "[!] Host no válido"
+    if platform.system().lower() == "windows":
+        cmd = ["tracert", "-d", "-h", str(max_hops), "-w", str(timeout * 1000), host]
+    else:
+        import shutil
+        bin_path = shutil.which("traceroute")
+        if not bin_path:
+            return "[!] Instala traceroute: sudo apt install traceroute"
+        cmd = [bin_path, "-n", "-m", str(max_hops), "-w", str(timeout), host]
+    try:
+        out = subprocess.run(cmd, capture_output=True, timeout=max_hops * (timeout + 1) + 10)
+        txt = _decode(out.stdout) or _decode(out.stderr)
+        return txt or "[!] Sin salida"
+    except Exception as e:
+        return f"[!] traceroute falló: {e}"
+
+
+def _decode(data: bytes) -> str:
+    try:
+        return data.decode("utf-8")
+    except UnicodeDecodeError:
+        pass
+    if os.name == "nt":
+        try:
+            out = subprocess.run(["cmd", "/c", "chcp"], capture_output=True, timeout=10)
+            nums = re.findall(r"\d+", (out.stdout or b"").decode(errors="replace"))
+            return data.decode(f"cp{nums[-1]}" if nums else "cp850", errors="replace")
+        except Exception:
+            return data.decode("cp850", errors="replace")
+    return data.decode(errors="replace")
