@@ -11,7 +11,7 @@ try:
 except Exception:
     pass
 
-from tools import netdiscover, reporter
+from tools import netdiscover, nmapscan, reporter
 
 __version__ = "1.0.0"
 
@@ -114,6 +114,7 @@ def main():
         print(f"  {C.NC}[3]{C.END} > Detalle de una IP")
         print(f"  {C.NC}[4]{C.END} > Guardar reporte (HTML+TXT+CSV)")
         print(f"  {C.NC}[5]{C.END} > Vigilar (alerta intrusos)")
+        print(f"  {C.NC}[6]{C.END} > Nmap (descubrir + versiones)")
         print(f"  {C.NO}[0]{C.END} < Salir")
         c = ask("Elige")
         if c == "0":
@@ -154,6 +155,35 @@ def main():
                 continue
             h, t, c = reporter.save_scan(last, net)
             print(f" {C.NG}Guardado:{C.END}\n   HTML: {h}\n   TXT : {t}\n   CSV : {c}")
+        elif c == "6":
+            if not nmapscan.nmap_path():
+                print(" [!] nmap no instalado. Descárgalo de https://nmap.org/download.html")
+                print("     (en Windows instala también Npcap cuando lo pida).")
+                continue
+            print(f" {C.NY}Descubriendo con nmap -sn {net['red']}...{C.END}")
+            try:
+                vivos = nmapscan.discover(net["red"])
+            except Exception as e:
+                print(f" [!] {e}")
+                continue
+            print(f" {C.NG}Hosts activos: {len(vivos)}{C.END}")
+            for ip in vivos:
+                print(f"   + {ip}")
+            host = ask("IP para versiones de servicios [Enter=omitir]")
+            if host:
+                print(f" {C.NY}nmap -sV {host} (tarda ~30s, requiere confirmación){C.END}")
+                if ask("¿Es tu equipo/red? [s/N]").lower() not in ("s", "si", "sí", "y"):
+                    print(" Cancelado.")
+                    continue
+                try:
+                    servs = nmapscan.versions(host)
+                    for s in servs:
+                        print(f"   puerto {s['puerto']}: {s['servicio']} {s['version']}")
+                    avisos = nmapscan.advisories([int(s["puerto"]) for s in servs if s["puerto"].isdigit()])
+                    for a in avisos:
+                        print(f"   {C.NY}! {a}{C.END}")
+                except Exception as e:
+                    print(f" [!] {e}")
         elif c == "5":
             import time as _t
             mins = ask("Cada cuántos minutos re-escanear [5]") or "5"

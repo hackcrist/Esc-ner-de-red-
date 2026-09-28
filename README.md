@@ -11,10 +11,11 @@ python scanner.py            # menú interactivo
 python scanner.py --version  # ver versión
 ```
 
-Menú: `1) Escanear  2) ARP  3) Detalle IP  4) Guardar reporte  5) Vigilar`.
+Menú: `1) Escanear  2) ARP  3) Detalle IP  4) Guardar reporte  5) Vigilar  6) Nmap`.
 
 - Cada equipo: IP, MAC, **latencia ms**, **puertos comunes abiertos**, fabricante y nombre.
 - **Alerta de intrusos**: compara con el escaneo anterior y marca `[NUEVO]`; el modo vigía re-escanea cada N minutos.
+- **Nmap opcional**: descubrimiento `-sn` + versiones `-sV` con confirmación (instálalo de nmap.org + Npcap).
 - OUI offline ampliada (~70 prefijos) + api.macvendors.com de respaldo.
 
 Sin dependencias: solo Python 3.10+ (biblioteca estándar).
