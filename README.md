@@ -16,6 +16,7 @@ Descubre hosts y servicios en redes que te pertenecen o con autorización escrit
 | 🔎 Barrido | nmap `-sn` si está instalado, si no sweep Python (64 hilos) |
 | 📡 Por equipo | IP, MAC, latencia ms, puertos comunes, fabricante, nombre |
 | 🚨 Intrusos | Compara con el escaneo anterior y marca `[NUEVO]`; modo vigía cada N minutos |
+| 🛡️ Auditoría de red | Puertos expuestos, FTP/Telnet en claro, DNS, internet y gateway (nada personal) |
 | 🧬 Versiones | nmap `-sV` con confirmación + avisos (FTP/Telnet/SMB/RDP/VNC expuestos) |
 | 📁 Reportes | HTML + TXT + CSV con índice auto-generado (carpeta `reportes/`) |
 | 🗃️ OUI offline | ~70 prefijos MAC sin internet + api.macvendors.com de respaldo |

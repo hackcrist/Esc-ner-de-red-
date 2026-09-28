@@ -11,7 +11,7 @@ def ensure_dir() -> str:
     return BASE_DIR
 
 
-def save_scan(devices: list[dict], netinfo: dict) -> tuple[str, str, str]:
+def save_scan(devices: list[dict], netinfo: dict, audit: list[str] | None = None) -> tuple[str, str, str]:
     ensure_dir()
     ts = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     fecha = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -21,7 +21,12 @@ def save_scan(devices: list[dict], netinfo: dict) -> tuple[str, str, str]:
     with open(txt, "w", encoding="utf-8") as f:
         f.write("=" * 60 + "\n SCAN RED LOCAL - Solo tu propia red, fines educativos\n" + "=" * 60 + "\n")
         f.write(f"Fecha: {fecha}\nRed: {netinfo.get('red')} | Tu IP: {netinfo.get('ip')} | Gateway: {netinfo.get('gateway')}\n")
-        f.write(f"Dispositivos: {len(devices)}\n\n")
+        f.write(f"Dispositivos: {len(devices)}\n")
+        if audit:
+            f.write("AUDITORÍA DE RED:\n")
+            for h in audit:
+                f.write(f"  · {h}\n")
+        f.write("\n")
         f.write(f"{'IP':<16}{'MAC':<20}{'MS':<7}{'PUERTOS':<16}{'FABRICANTE':<24}NOMBRE\n" + "-" * 110 + "\n")
         for d in devices:
             nuevo = " [NUEVO]" if d.get("nuevo") else ""
@@ -53,7 +58,13 @@ header{{padding:28px;text-align:center;background:linear-gradient(135deg,#00ffea
 h1{{margin:0;color:#000}}table{{width:94%;margin:20px auto;border-collapse:collapse;background:#14142b;font-size:.9em}}
 th,td{{padding:8px 10px;border-bottom:1px solid #ffffff18;text-align:left}}th{{color:#00ffea}}</style></head>
 <body><header><h1>SCAN RED LOCAL</h1><p>{html.escape(fecha)} · {html.escape(str(netinfo.get('red')))} · {len(devices)} equipos</p></header>
-<table><tr><th>IP</th><th>MAC</th><th>ms</th><th>Puertos</th><th>Fabricante</th><th>Nombre</th><th></th></tr>{rows}</table></body></html>"""
+<table><tr><th>IP</th><th>MAC</th><th>ms</th><th>Puertos</th><th>Fabricante</th><th>Nombre</th><th></th></tr>{rows}</table>
+<AUDIT/></body></html>"""
+    audit_html = ""
+    if audit:
+        items = "".join(f"<li>{html.escape(h)}</li>" for h in audit)
+        audit_html = f'<div style="width:94%;margin:0 auto 30px;background:#14142b;border-radius:12px;padding:16px"><h2 style="color:#ffe600">AUDITORÍA DE RED</h2><ul>{items}</ul></div>'
+    page = page.replace("<AUDIT/>", audit_html)
     htm = os.path.join(BASE_DIR, f"scan_{red}_{ts}.html")
     with open(htm, "w", encoding="utf-8") as f:
         f.write(page)

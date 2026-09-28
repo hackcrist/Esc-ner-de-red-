@@ -172,3 +172,36 @@ def reverse_name(ip: str) -> str:
         return socket.gethostbyaddr(ip)[0]
     except Exception:
         return "-"
+
+
+def dns_servers() -> list[str]:
+    """DNS configurados en este equipo."""
+    out: list[str] = []
+    try:
+        if platform.system().lower() == "windows":
+            r = subprocess.run(
+                ["powershell", "-NoProfile", "-Command",
+                 "(Get-DnsClientServerAddress -AddressFamily IPv4 |"
+                 " Where-Object {$_.ServerAddresses}).ServerAddresses"],
+                capture_output=True, text=True, timeout=15)
+            for token in (r.stdout or "").replace(",", " ").split():
+                if re.match(r"^\d+\.\d+\.\d+\.\d+$", token) and token not in out:
+                    out.append(token)
+        else:
+            with open("/etc/resolv.conf", encoding="utf-8", errors="replace") as f:
+                for line in f:
+                    m = re.match(r"\s*nameserver\s+(\S+)", line)
+                    if m and m.group(1) not in out:
+                        out.append(m.group(1))
+    except Exception:
+        pass
+    return out
+
+
+def internet_ok(timeout: float = 3.0) -> bool:
+    try:
+        s = socket.create_connection(("8.8.8.8", 53), timeout=timeout)
+        s.close()
+        return True
+    except Exception:
+        return False

@@ -13,7 +13,7 @@ except Exception:
 
 from tools import netdiscover, nmapscan, reporter
 
-__version__ = "1.9.5"
+__version__ = "2.1.5"
 
 if os.name == "nt":
     try:
@@ -46,6 +46,35 @@ def ask(p):
 def confirm_auth() -> bool:
     print(f"\n {C.NY}Solo objetivos propios o con autorización escrita.{C.END}")
     return ask("¿Confirmas autorización? [s/N]").lower() in ("s", "si", "sí", "y", "yes")
+
+
+def net_audit(devices: list[dict], netinfo: dict) -> list[str]:
+    """Auditoría de RED (no personal): resumen de exposición de la red."""
+    from tools import nmapscan
+    hallazgos: list[str] = []
+    expuestos: dict[int, list[str]] = {}
+    for d in devices:
+        for p in d.get("puertos", []):
+            expuestos.setdefault(p, []).append(d["ip"])
+    if not expuestos:
+        hallazgos.append("OK: sin puertos comunes abiertos en los equipos detectados.")
+    for p in sorted(expuestos):
+        hallazgos.append(f"Puerto {p} abierto en: {', '.join(expuestos[p])}")
+    for a in nmapscan.advisories(list(expuestos)):
+        hallazgos.append("AVISO: " + a)
+    telnet_ftp = [d["ip"] for d in devices
+                  if any(x in d.get("puertos", []) for x in (21, 23))]
+    if telnet_ftp:
+        hallazgos.append("CRÍTICO: FTP/Telnet en claro en: " + ", ".join(telnet_ftp))
+    dns = netdiscover.dns_servers() if hasattr(netdiscover, "dns_servers") else []
+    if dns:
+        hallazgos.append("DNS de la red: " + ", ".join(dns))
+    hallazgos.append("Internet: " + ("OK" if netdiscover.internet_ok() else "sin salida"))
+    gw = next((d for d in devices if d["ip"] == netinfo.get("gateway")), None)
+    if gw:
+        hallazgos.append(f"Gateway {gw['ip']}: {gw.get('vendor', '-')} "
+                         f"puertos {','.join(map(str, gw.get('puertos', []))) or '-'}")
+    return hallazgos
 
 
 def show(devices):
@@ -110,6 +139,7 @@ def main():
         print(f" [!] {net['error']}")
         sys.exit(1)
     last: list[dict] = []
+    last_audit: list[str] = []
 
     def do_scan(red: str) -> list[dict]:
         """Barrido con nmap si hay, si no Python. Devuelve equipos enriquecidos."""
@@ -135,6 +165,13 @@ def main():
         save_last([d["ip"] for d in devs])
         print(f" {C.NG}Encontrados: {len(devs)}{C.END}")
         show(devs)
+        print(f"\n {C.NY}{C.BOLD}AUDITORÍA DE RED:{C.END}")
+        audit = net_audit(devs, {"gateway": net.get("gateway")})
+        for h in audit:
+            col = C.NG if h.startswith("OK") else C.NO if "CRÍTICO" in h else C.NY
+            print(f"   {col}·{C.END} {h}")
+        nonlocal last_audit
+        last_audit = audit
         return devs
 
     while True:
@@ -210,7 +247,7 @@ def main():
             if not last:
                 print(" [!] Escanea primero (opción 1 o 2).")
                 continue
-            h, t, c = reporter.save_scan(last, net)
+            h, t, c = reporter.save_scan(last, net, last_audit or None)
             print(f" {C.NG}Guardado:{C.END}\n   HTML: {h}\n   TXT : {t}\n   CSV : {c}")
         else:
             print(" Opción no válida")
