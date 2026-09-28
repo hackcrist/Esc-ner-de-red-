@@ -69,9 +69,9 @@ reportes/    # se auto-crea al usarlo (no se sube a git)
 2. Verás tabla: IP, ms, puertos, fabricante, nombre. `[NUEVO]` si no estaba antes.
 3. Opción `5` para guardar el reporte.
 
-**Otra red autorizada (opción 2):**
-1. Confirma que tienes autorización escrita.
-2. Escribe el CIDR, ej. `10.0.0.0/24`. Ojo: sin MAC/fabricante fuera de tu LAN.
+**Auditoría profesional (opción 2):**
+1. Escribe cliente, alcance CIDR y referencia de autorización (sin referencia no hay auditoría).
+2. Corre solo: descubrimiento → enumeración → versiones → reporte `auditoria_<cliente>_*` con metodología, críticos/avisos y remediación.
 
 **Detalle + versiones (opción 3):**
 1. Escribe la IP, ej. `192.168.12.1`.
