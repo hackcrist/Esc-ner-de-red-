@@ -61,6 +61,33 @@ reportes/    # se auto-crea al usarlo (no se sube a git)
 
 **Límites honestos:** MAC y fabricante solo salen en LAN local (ARP no cruza routers). Fuera de tu red verás IPs, latencia y puertos, nada más.
 
+## 🖥️ Uso detallado
+
+**Escanear tu red (opción 1):**
+1. Elige `1`, espera ~16s (Go/nmap) o ~40s (Python solo).
+2. Verás tabla: IP, ms, puertos, fabricante, nombre. `[NUEVO]` si no estaba antes.
+3. Opción `5` para guardar el reporte.
+
+**Otra red autorizada (opción 2):**
+1. Confirma que tienes autorización escrita.
+2. Escribe el CIDR, ej. `10.0.0.0/24`. Ojo: sin MAC/fabricante fuera de tu LAN.
+
+**Detalle + versiones (opción 3):**
+1. Escribe la IP, ej. `192.168.12.1`.
+2. Verás MAC, fabricante, latencia y puertos. Si hay nmap, ofrece `-sV` (pide confirmación).
+
+**Vigilar intrusos (opción 4):**
+1. Elige cada cuántos minutos, ej. `5`.
+2. Deja corriendo; si entra un equipo nuevo grita `INTRUSO: <ip>`. Ctrl+C para parar.
+
+**Comandos Go directos:**
+```bash
+./lanscan-go.exe mynet                              # tu IP, red y gateway
+./lanscan-go.exe sweep --net 192.168.12.0/24        # barrido JSON
+./lanscan-go.exe vendor --mac 18:0c:7a:ea:b1:e1     # fabricante
+./lanscan-go.exe report --net 192.168.12.0/24       # HTML+TXT+CSV
+```
+
 ## 👤 Autor
 
 **Crist Code** — https://github.com/hackcrist/Esc-ner-de-red-
