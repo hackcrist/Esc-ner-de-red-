@@ -1,43 +1,53 @@
 # Escáner de red
 
-Descubre hosts y servicios en redes que te pertenecen o con autorización escrita: ping sweep, ARP, fabricantes, versiones con nmap y reportes HTML+TXT+CSV.
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?style=flat-square&logo=python&logoColor=white)
+![Go](https://img.shields.io/badge/Go-1.21%2B-00ADD8?style=flat-square&logo=go&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green?style=flat-square)
+![Version](https://img.shields.io/badge/Version-1.0-ff00ff?style=flat-square)
 
-> Fines educativos. Solo objetivos propios o con autorización escrita. El escaneo de puertos/versiones pide confirmación.
+Descubre hosts y servicios en redes que te pertenecen o con autorización escrita: ping sweep, ARP, fabricantes por MAC, versiones con nmap y reportes HTML+TXT+CSV. **Python + Go juntos.**
 
-## Uso
+> 📚 **Fines educativos.** Solo objetivos propios o con autorización escrita. El escaneo de versiones pide confirmación explícita.
+
+## ✨ Funciones
+
+| Qué hace | Detalle |
+|---|---|
+| 🔎 Barrido | nmap `-sn` si está instalado, si no sweep Python (64 hilos) |
+| 📡 Por equipo | IP, MAC, latencia ms, puertos comunes, fabricante, nombre |
+| 🚨 Intrusos | Compara con el escaneo anterior y marca `[NUEVO]`; modo vigía cada N minutos |
+| 🧬 Versiones | nmap `-sV` con confirmación + avisos (FTP/Telnet/SMB/RDP/VNC expuestos) |
+| 📁 Reportes | HTML + TXT + CSV con índice auto-generado (carpeta `reportes/`) |
+| 🗃️ OUI offline | ~70 prefijos MAC sin internet + api.macvendors.com de respaldo |
+
+## 🚀 Uso rápido
 
 ```bash
-python scanner.py            # menú interactivo
+# Python (requerido) — desde la carpeta del proyecto
+python scanner.py            # menú: 1) Escanear  2) Otra red  3) Detalle  4) Vigilar  5) Guardar
 python scanner.py --version  # ver versión
-```
 
-Menú estable: `1) Escanear  2) Otra red  3) Detalle  4) Vigilar  5) Guardar`.
-
-- Cada equipo: IP, MAC, **latencia ms**, **puertos comunes abiertos**, fabricante y nombre.
-- **Alerta de intrusos**: compara con el escaneo anterior y marca `[NUEVO]`; el modo vigía re-escanea cada N minutos.
-- **Nmap opcional**: descubrimiento `-sn` + versiones `-sV` con confirmación (instálalo de nmap.org + Npcap).
-- OUI offline ampliada (~70 prefijos) + api.macvendors.com de respaldo.
-
-Sin dependencias: solo Python 3.10+ (biblioteca estándar).
-
-## Gemelo Go (más rápido)
-
-```bash
+# Go (opcional, barrido en ~16s)
 cd go
 go build -o lanscan-go.exe .
-./lanscan-go.exe sweep --net 192.168.12.0/24
-./lanscan-go.exe report --net 192.168.12.0/24
+./lanscan-go.exe sweep --net 192.168.1.0/24
+./lanscan-go.exe report --net 192.168.1.0/24
 ./lanscan-go.exe menu
 ```
 
-Comandos: `mynet sweep arp vendor report menu version`. El sweep en Go tarda ~16s vs ~40s en Python.
+Comandos Go: `mynet sweep arp vendor report menu version`.
 
-## Estructura
+Opcional: instala [nmap](https://nmap.org/download.html) (+Npcap en Windows) para descubrimiento y versiones más rápidas.
+
+## 📁 Estructura
 
 ```
-scanner.py   # menú neón
-tools/
-  netdiscover.py  # red local, ping sweep, ARP, fabricantes
-  oui.py          # base MAC offline + api.macvendors.com de respaldo
-  reporter.py     # reportes/ HTML+TXT+índice (se auto-crea)
+scanner.py   # menú neón en español
+tools/       # netdiscover, nmapscan, oui, reporter
+go/          # lanscan-go v1.1: mynet, sweep, arp, vendor, report, menu
+reportes/    # se auto-crea al usarlo (no se sube a git)
 ```
+
+## 👤 Autor
+
+**Crist Code** — https://github.com/hackcrist/Esc-ner-de-red-
