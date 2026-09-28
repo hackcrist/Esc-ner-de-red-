@@ -64,3 +64,6 @@ reportes/    # se auto-crea al usarlo (no se sube a git)
 ## 👤 Autor
 
 **Crist Code** — https://github.com/hackcrist/Esc-ner-de-red-
+
+---
+<p align="center">Hecho con amor por <b>Crist Code</b> ❤️<br>Si te sirve, deja tu ⭐ en GitHub</p>
