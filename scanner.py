@@ -182,7 +182,7 @@ def main():
     while True:
         print(f"\n {C.NV}{C.BOLD}+-- MENU --+{C.END}")
         print(f"  {C.NC}[1]{C.END} > Escanear red")
-        print(f"  {C.NC}[2]{C.END} > Otra red")
+        print(f"  {C.NC}[2]{C.END} > Auditoría cliente")
         print(f"  {C.NC}[3]{C.END} > Detalle IP")
         print(f"  {C.NC}[4]{C.END} > Vigilar")
         print(f"  {C.NC}[5]{C.END} > Guardar")
@@ -194,18 +194,40 @@ def main():
         elif c == "1":
             last = do_scan(net["red"])
         elif c == "2":
-            if not confirm_auth():
-                print(" Cancelado: se requiere autorización.")
-                continue
-            cidr = ask("Red CIDR (ej. 10.0.0.0/24)")
+            print(f" {C.NY}{C.BOLD}AUDITORÍA PROFESIONAL - documenta el alcance primero.{C.END}")
+            cliente = ask("Cliente/empresa") or "Sin especificar"
+            cidr = ask("Alcance CIDR (ej. 10.0.0.0/24)")
             try:
                 import ipaddress as _ip
                 red = str(_ip.ip_network(cidr, strict=False))
             except ValueError:
                 print(" [!] CIDR no válido.")
                 continue
-            print(f" {C.D}Nota: MAC/fabricante solo salen en LAN local.{C.END}")
-            last = do_scan(red, local=False)
+            aut = ask("Referencia de autorización (ticket/contrato/nombre)")
+            if not aut:
+                print(" [!] Sin referencia no hay auditoría.")
+                continue
+            if not confirm_auth():
+                print(" Cancelado.")
+                continue
+            print(f" {C.NY}Fase 1/3 descubrimiento en {red}...{C.END}")
+            last = do_scan(red, local=(red == net.get("red")))
+            print(f" {C.NY}Fase 2/3 versiones de servicios...{C.END}")
+            detalle = []
+            for d in last:
+                if not d.get("puertos"):
+                    continue
+                if nmapscan.nmap_path():
+                    try:
+                        servs = nmapscan.versions(d["ip"], ports=",".join(map(str, d["puertos"])))
+                        detalle.append({"ip": d["ip"], "servicios": servs})
+                    except Exception as e:
+                        detalle.append({"ip": d["ip"], "servicios": [], "nota": str(e)[:80]})
+            print(f" {C.NY}Fase 3/3 reporte...{C.END}")
+            meta = {"cliente": cliente, "alcance": red, "autorizacion": aut,
+                    "auditor": "Crist Code / Escáner v" + __version__}
+            h, t, c = reporter.save_audit(last, meta, net_audit(last, {}, local=False), detalle)
+            print(f" {C.NG}Auditoría guardada:{C.END}\n   HTML: {h}\n   TXT : {t}\n   CSV : {c}")
         elif c == "3":
             ip = ask("IP (ej. 192.168.12.1)")
             mac = netdiscover.arp_table().get(ip, "-")
