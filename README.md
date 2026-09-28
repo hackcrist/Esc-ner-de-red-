@@ -1,8 +1,8 @@
-# Escáner de red local
+# Escáner de red
 
-Descubre quién está en tu WiFi: ping sweep a tu red, tabla ARP, fabricante por MAC y reportes HTML+TXT.
+Descubre hosts y servicios en redes que te pertenecen o con autorización escrita: ping sweep, ARP, fabricantes, versiones con nmap y reportes HTML+TXT+CSV.
 
-> Solo tu propia red. Fines educativos.
+> Fines educativos. Solo objetivos propios o con autorización escrita. El escaneo de puertos/versiones pide confirmación.
 
 ## Uso
 

@@ -35,12 +35,17 @@ BANNER = f"""{C.NC}{C.BOLD}
  |  _| \\__ \\ |   |  \\| |  \\| |  _| | |_) |
  | |___ ___) | |__| |\\  | |\\  | |___|  _ <
  |_____|____/\\____|_| \\_|_| \\_|_____|_| \\_\\{C.END}
-  {C.NP}{C.BOLD}Escáner de red local v{__version__}{C.END} {C.D}(tu WiFi, educativo){C.END}
+  {C.NP}{C.BOLD}Escáner de red v{__version__}{C.END} {C.D}(educativo, objetivos autorizados){C.END}
 """
 
 
 def ask(p):
     return input(f" {C.NC}{C.BOLD}>{C.END} {p}: ").strip()
+
+
+def confirm_auth() -> bool:
+    print(f"\n {C.NY}Solo objetivos propios o con autorización escrita.{C.END}")
+    return ask("¿Confirmas autorización? [s/N]").lower() in ("s", "si", "sí", "y", "yes")
 
 
 def show(devices):
@@ -115,6 +120,7 @@ def main():
         print(f"  {C.NC}[4]{C.END} > Guardar reporte (HTML+TXT+CSV)")
         print(f"  {C.NC}[5]{C.END} > Vigilar (alerta intrusos)")
         print(f"  {C.NC}[6]{C.END} > Nmap (descubrir + versiones)")
+        print(f"  {C.NC}[7]{C.END} > Escanear otra red (autorizada)")
         print(f"  {C.NO}[0]{C.END} < Salir")
         c = ask("Elige")
         if c == "0":
@@ -172,7 +178,7 @@ def main():
             host = ask("IP para versiones de servicios [Enter=omitir]")
             if host:
                 print(f" {C.NY}nmap -sV {host} (tarda ~30s, requiere confirmación){C.END}")
-                if ask("¿Es tu equipo/red? [s/N]").lower() not in ("s", "si", "sí", "y"):
+                if not confirm_auth():
                     print(" Cancelado.")
                     continue
                 try:
@@ -184,6 +190,22 @@ def main():
                         print(f"   {C.NY}! {a}{C.END}")
                 except Exception as e:
                     print(f" [!] {e}")
+        elif c == "7":
+            if not confirm_auth():
+                print(" Cancelado: se requiere autorización.")
+                continue
+            cidr = ask("Red CIDR (ej. 10.0.0.0/24)")
+            try:
+                import ipaddress as _ip
+                red = str(_ip.ip_network(cidr, strict=False))
+            except ValueError:
+                print(" [!] CIDR no válido.")
+                continue
+            print(f" {C.NY}Escaneando {red}... (MAC/fabricante solo salen en LAN local){C.END}")
+            vivos = netdiscover.ping_sweep(red)
+            last = enrich(vivos)
+            print(f" {C.NG}Encontrados: {len(last)}{C.END}")
+            show(last)
         elif c == "5":
             import time as _t
             mins = ask("Cada cuántos minutos re-escanear [5]") or "5"
